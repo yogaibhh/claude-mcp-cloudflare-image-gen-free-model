@@ -1,12 +1,35 @@
+# Claude Image Gen with a free Cloudflare model
+
+Fork of [guinacio/claude-image-gen](https://github.com/guinacio/claude-image-gen) (MIT) that adds a **free Cloudflare Workers AI provider** and makes it the default, so Claude Code can generate UI assets without paying per image. The upstream Gemini and OpenAI providers still work when their keys are set.
+
+- **Models:** `@cf/black-forest-labs/flux-2-klein-4b` (default, roughly 95 images/day on the free allocation), `flux-2-klein-9b` (higher quality, ~7/day), `flux-1-schnell`, `@cf/leonardo/lucid-origin`, `@cf/leonardo/phoenix-1.0`. Any `@cf/*` model name routes to Cloudflare.
+- **Reference images** (klein models): up to 4, PNG/JPEG, scaled down automatically to fit 500×500. No transparent background, mask or output-format control on Cloudflare.
+- **Anti-slop skill:** the `image-generation` skill is rewritten around art direction: design tokens first, banned visual clichés, no text in images, consistent sets.
+- **Research notes:** pricing, model limits, alternatives evaluated, live test results and gotchas are in [docs/RESEARCH.md](docs/RESEARCH.md).
+
+## Quick start (this fork)
+
+1. Create a free Cloudflare account. In the dashboard open **AI → Workers AI → Use REST API**, click **Create a Workers AI API Token**, and copy the token and the **Account ID** shown on the same page.
+2. Set them as environment variables (Windows: run in any terminal, they are saved for your user account):
+   ```powershell
+   setx CLOUDFLARE_ACCOUNT_ID "your-account-id"
+   setx CLOUDFLARE_API_TOKEN "your-token"
+   ```
+   macOS/Linux: `export CLOUDFLARE_ACCOUNT_ID=...` and `export CLOUDFLARE_API_TOKEN=...` in your shell profile.
+3. Install the plugin for all projects:
+   ```bash
+   claude plugin marketplace add yogaibhh/claude-mcp-cloudflare-image-gen-free-model
+   claude plugin install media-pipeline@media-pipeline-marketplace --scope user
+   ```
+4. Fully restart Claude (on Windows, quit the desktop app from the system tray, not just the window) so the MCP server sees the new variables.
+
+Then ask Claude for an image asset, e.g. "generate a 16:9 hero image for this page". The rest of this README is the upstream documentation; its install commands point to the upstream repository.
+
+---
+
 # AI Image Generation - Claude Skill + MCP
 
 AI-powered image generation using Google Gemini or OpenAI (gpt-image-2), integrated with Claude Code.
-
-> **Local fork (branch `cloudflare-provider`):** adds a free **Cloudflare Workers AI** provider and makes it the default.
-> - Models: `@cf/black-forest-labs/flux-2-klein-4b` (default, ~95 images/day free), `flux-2-klein-9b` (~7/day, higher quality), `flux-1-schnell`, `@cf/leonardo/lucid-origin`, `@cf/leonardo/phoenix-1.0`. Any `@cf/*` model name routes to Cloudflare.
-> - Setup: a free Cloudflare account, its **Account ID**, and an API token from the **Workers AI** template, set as `CLOUDFLARE_ACCOUNT_ID` and `CLOUDFLARE_API_TOKEN`. Gemini/OpenAI keys become optional.
-> - Reference images (klein models): up to 4, PNG/JPEG, scaled down automatically to fit 500×500. No transparent background, mask or output-format control on Cloudflare.
-> - The `image-generation` skill is rewritten around anti-slop art direction (design tokens first, banned visual clichés, anchor image + references for consistent sets).
 
 ## Features
 

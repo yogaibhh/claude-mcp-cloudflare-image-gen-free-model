@@ -5,7 +5,19 @@ import {
   getDefaultModelForProvider,
   resolveProviderForModel,
 } from "../build/provider.js";
-import { createRuntimeConfig, parseImageProvider } from "../build/runtime.js";
+import {
+  createRuntimeConfig,
+  hasAnyApiKey,
+  parseImageProvider,
+} from "../build/runtime.js";
+
+test("resolveProviderForModel routes @cf/ models to cloudflare", () => {
+  assert.equal(
+    resolveProviderForModel("@cf/black-forest-labs/flux-2-klein-4b"),
+    "cloudflare"
+  );
+  assert.equal(resolveProviderForModel("  @CF/leonardo/lucid-origin "), "cloudflare");
+});
 
 test("resolveProviderForModel routes OpenAI model families to openai", () => {
   assert.equal(resolveProviderForModel("gpt-image-2"), "openai");
@@ -72,4 +84,50 @@ test("createRuntimeConfig falls back to built-in defaults", () => {
   assert.equal(config.openaiDefaultModel, "gpt-image-2");
   assert.equal(config.geminiDefaultModel, "gemini-3-pro-image-preview");
   assert.equal(config.defaultProvider, "gemini");
+});
+
+test("createRuntimeConfig reads Cloudflare environment variables", () => {
+  const config = createRuntimeConfig({
+    CLOUDFLARE_ACCOUNT_ID: "  account-123  ",
+    CLOUDFLARE_API_TOKEN: "  token-abc  ",
+    CLOUDFLARE_DEFAULT_MODEL: "  @cf/black-forest-labs/flux-2-klein-9b  ",
+  });
+
+  assert.equal(config.cloudflareAccountId, "account-123");
+  assert.equal(config.cloudflareApiToken, "token-abc");
+  assert.equal(config.cloudflareDefaultModel, "@cf/black-forest-labs/flux-2-klein-9b");
+  assert.equal(config.defaultProvider, "cloudflare");
+  assert.equal(hasAnyApiKey(config), true);
+  assert.equal(getDefaultModelForProvider(config, "cloudflare"), "@cf/black-forest-labs/flux-2-klein-9b");
+});
+
+test("createRuntimeConfig defaults the Cloudflare model to flux-2-klein-4b", () => {
+  const config = createRuntimeConfig({ GEMINI_API_KEY: "gemini-key" });
+
+  assert.equal(config.cloudflareDefaultModel, "@cf/black-forest-labs/flux-2-klein-4b");
+  assert.equal(config.defaultProvider, "gemini");
+});
+
+test("Cloudflare needs both the account ID and the token to count as configured", () => {
+  assert.equal(hasAnyApiKey(createRuntimeConfig({ CLOUDFLARE_API_TOKEN: "token" })), false);
+  assert.equal(hasAnyApiKey(createRuntimeConfig({ CLOUDFLARE_ACCOUNT_ID: "account" })), false);
+  assert.equal(
+    createRuntimeConfig({ CLOUDFLARE_API_TOKEN: "token" }).defaultProvider,
+    "gemini"
+  );
+});
+
+test("parseImageProvider accepts cloudflare and infers it when it is the only provider", () => {
+  assert.equal(parseImageProvider("cloudflare", "gemini-key", "openai-key"), "cloudflare");
+  assert.equal(parseImageProvider(" CloudFlare ", "", ""), "cloudflare");
+  assert.equal(parseImageProvider(undefined, "", "", true), "cloudflare");
+  assert.equal(parseImageProvider(undefined, "gemini-key", "", true), "gemini");
+  assert.equal(parseImageProvider(undefined, "", "openai-key", true), "openai");
+});
+
+test("getApiKeyEnvVarForProvider names both Cloudflare variables", () => {
+  assert.equal(
+    getApiKeyEnvVarForProvider("cloudflare"),
+    "CLOUDFLARE_ACCOUNT_ID and CLOUDFLARE_API_TOKEN"
+  );
 });

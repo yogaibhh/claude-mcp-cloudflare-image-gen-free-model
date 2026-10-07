@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Standalone CLI for generating images using Google Gemini or OpenAI.
+ * Standalone CLI for generating images using Cloudflare Workers AI, Google Gemini or OpenAI.
  * This path does not require the MCP server or stdio transport.
  *
  * Usage:
@@ -21,22 +21,25 @@ Options:
   -p, --prompt <text>        Image description (required)
   -o, --output <path>        Output file path (optional, auto-generated if not provided)
   -a, --aspect-ratio <ratio> Aspect ratio: ${ASPECT_RATIOS.join(", ")} (default: 1:1)
-  -m, --model <model>        Model to use (gpt-image*/dall-e* → OpenAI, others → Gemini; validated dynamically)
-  -r, --reference-images <paths>  Reference image paths (PNG/JPEG/WebP, repeatable or comma-separated, max 5)
+  -m, --model <model>        Model to use (@cf/* → Cloudflare, gpt-image*/dall-e* → OpenAI, others → Gemini; validated dynamically)
+  -r, --reference-images <paths>  Reference image paths (PNG/JPEG/WebP, repeatable or comma-separated, max 5; Cloudflare klein: max 4, PNG/JPEG)
       --mask <path>          PNG mask marking the region to repaint (OpenAI only, requires --reference-images)
   -b, --background <mode>    auto, transparent or opaque (OpenAI only)
   -f, --output-format <fmt>  png, jpeg or webp (OpenAI only)
   -d, --output-dir <dir>     Output directory (default: current directory)
-  -t, --timeout-ms <ms>      Request timeout in milliseconds (both providers)
+  -t, --timeout-ms <ms>      Request timeout in milliseconds (all providers)
   -l, --log-level <level>    Logging level: error, warn, info, debug
   -h, --help                 Show this help message
 
-Environment:
-  GEMINI_API_KEY             Your Gemini API key (at least one required)
-  OPENAI_API_KEY             Your OpenAI API key (at least one required)
+Environment (at least one provider required):
+  CLOUDFLARE_ACCOUNT_ID      Your Cloudflare account ID (free Workers AI allocation)
+  CLOUDFLARE_API_TOKEN       Cloudflare API token with the Workers AI permission
+  CLOUDFLARE_DEFAULT_MODEL   Preferred default Cloudflare model (optional, default @cf/black-forest-labs/flux-2-klein-4b)
+  GEMINI_API_KEY             Your Gemini API key
+  OPENAI_API_KEY             Your OpenAI API key
   GEMINI_DEFAULT_MODEL       Preferred default model (optional)
   OPENAI_DEFAULT_MODEL       Preferred default OpenAI model (optional, default gpt-image-2)
-  IMAGE_PROVIDER             gemini or openai — provider used when --model is omitted (optional)
+  IMAGE_PROVIDER             cloudflare, gemini or openai — provider used when --model is omitted (optional)
   GEMINI_REQUEST_TIMEOUT_MS  Request timeout in milliseconds (optional)
   IMAGE_OUTPUT_DIR           Default output directory (overridden by --output-dir)
   MEDIA_PIPELINE_LOG_LEVEL   Logging level for stderr diagnostics (optional)
@@ -45,6 +48,7 @@ Examples:
   node build/cli.bundle.js -p "A sunset over mountains" -o "./sunset.png"
   node build/cli.bundle.js --prompt "Hero image for tech startup" --aspect-ratio "16:9"
   node build/cli.bundle.js -p "Product photo" --model gpt-image-2 -o "./product.png"
+  node build/cli.bundle.js -p "Empty state illustration" -m @cf/black-forest-labs/flux-2-klein-9b -r "./approved-hero.png"
   node build/cli.bundle.js -p "Logo variant" -r "./ref1.png,./ref2.png" -r "./ref3.png"
 `);
 }
@@ -121,7 +125,7 @@ async function main(): Promise<void> {
       console.log(JSON.stringify({
         success: false,
         errorCode: "CONFIG_ERROR",
-        error: "No provider API key set: set GEMINI_API_KEY and/or OPENAI_API_KEY",
+        error: "No provider configured: set CLOUDFLARE_ACCOUNT_ID + CLOUDFLARE_API_TOKEN, GEMINI_API_KEY and/or OPENAI_API_KEY",
       }));
       process.exit(1);
     }

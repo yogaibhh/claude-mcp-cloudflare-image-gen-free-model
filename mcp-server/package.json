@@ -26,6 +26,7 @@
   "dependencies": {
     "@google/genai": "^1.0.0",
     "@modelcontextprotocol/server": "^2.0.0",
+    "jimp": "^1.6.1",
     "openai": "^7.3.0",
     "zod": "^4.4.3"
   },

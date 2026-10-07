@@ -1,188 +1,117 @@
 ---
 name: image-generation
-description: Generates professional AI images using Google Gemini. ALWAYS invoke this skill when building websites, landing pages, slide decks, presentations, or any task needing visual content. Invoke IMMEDIATELY when you detect image needs - don't wait for the user to ask. This skill handles prompt optimization and aspect ratio selection.
+description: Generates bitmap assets for UI work (hero images, section illustrations, empty states, OG/social cards, backgrounds, textures) with art direction that avoids the generic "AI slop" look. Defaults to free Cloudflare Workers AI FLUX.2 models; Gemini and OpenAI are optional paid fallbacks. Use when a page or app genuinely needs an image asset, not for icons, logos, charts or UI screenshots.
 ---
 
-# Image Generation Skill
+# Image Generation (anti-slop)
 
-Generate professional AI images using Google Gemini via the bundled CLI script.
+Generate image assets for websites and apps, saved straight into the project.
+The default provider is **Cloudflare Workers AI** on its free daily allocation, so every image spends a shared, limited budget: plan the asset list first, generate deliberately, and look at each result before making more.
 
-## When to Invoke This Skill
+## Use it for / don't use it for
 
-Invoke immediately when:
+| Use it for | Don't generate these, use the real thing |
+|---|---|
+| Hero and section imagery | **Icons**: use an SVG set (Lucide, Phosphor, Tabler) |
+| Editorial illustrations, empty states, error pages | **Logos and wordmarks**: need vector, exact geometry |
+| OG / social cards *without* text (add text in HTML/SVG) | **Text inside images**: FLUX misspells it; overlay real text instead |
+| Background textures, materials, photographic details | **Charts, diagrams, UI mockups, screenshots**: build them in code |
+| Product-style shots of physical objects | **Avatars of "real" people for testimonials**: that's fake social proof |
 
-**Web Development**
-- Hero sections without images
-- Feature illustrations needed
-- Placeholder images in code (`placeholder.jpg`, `stock-photo.png`)
-- Empty visual sections (`<section class="hero">` without images)
-- Landing pages and marketing sites
+## Step 1: Art direction brief (before any generation)
 
-**Presentations & Documents**
-- Cover images and headers
-- Conceptual diagrams
-- Section dividers
+1. **Read the project's design source**: `DESIGN.md`, `PRODUCT.md`, Tailwind config, CSS custom properties (`--color-*`), existing images in `public/`/`assets/`. Pull out the palette as **hex values**, the type personality, and the mood.
+2. **Write a one-paragraph style block**: medium, palette (hex), light, texture, framing. You will paste this block **verbatim** into every prompt of the set so the assets belong together.
+3. **List the assets you need** (slot, aspect ratio, file path) and show the list to the user before generating more than two or three.
 
-**Applications**
-- Onboarding illustrations
-- Empty state graphics
-- Error page visuals
+If the project has no design source, ask the user for the mood and two or three reference sites, or propose a direction and confirm it first.
 
-## Using the CLI
+## Step 2: Write prompts that don't look AI-generated
 
-Run the bundled CLI script via bash:
+Describe the scene the way a photographer or illustrator would brief it: **concrete subject, material, light, lens/medium, palette, framing**.
+
+```
+[medium + style block] [specific subject doing/being something specific] [setting with real materials]
+[light source and direction] [camera/lens or illustration technique] [palette as hex] [framing for the slot]
+```
+
+**Banned defaults** (these are what make images read as AI slop):
+- Purple-to-blue gradients, neon glow, "electric" accents, lens flares
+- Floating abstract 3D shapes, glossy blobs, spheres and cubes "in space"
+- Generic isometric people, faceless corporate-memphis characters
+- "Diverse team smiling at a laptop", handshake, lightbulb, rocket, brain-with-circuits metaphors
+- Holographic UI floating in the air, glowing dashboards, matrix code
+- Everything perfectly centred and symmetrical, plastic-smooth skin, oversaturated HDR
+
+**FLUX models have no negative prompt.** Writing "no text, no gradient" tends to *add* those things. Describe what *is* in the frame instead: "plain matte warm-grey backdrop" rather than "no gradient background".
+
+### Bad → better
+
+**Hero, B2B software**
+- ✗ `Minimalist 3D illustration of abstract geometric shapes floating in space, gradient from deep purple to electric blue, subtle glow`
+- ✓ `Overhead photograph of a cluttered wooden workbench: printed invoices held by a brass binder clip, a half-finished cup of black coffee, a pencil with a chewed end. Late-afternoon window light from the left, long soft shadows. 35mm lens, shallow depth of field. Muted palette of oat #E8E0D0, ink navy #1F2A44 and one rust accent #B5502C. Wide frame with empty space on the right third for headline text.`
+
+**Empty state, task app**
+- ✗ `Cute flat illustration of a person relaxing, pastel colors, clean`
+- ✓ `Risograph-style illustration, two-colour print in teal #2F6F6A and coral #E86A50 on off-white paper with visible grain and slight misregistration. A single empty wire in-tray on a desk, one paper clip beside it. Generous negative space, centred-left, small scale in frame.`
+
+**Section background texture**
+- ✓ `Macro photograph of handmade cotton paper, deckled edge entering from the bottom, raking light revealing fibres, colour #F3EEE6, very low contrast so text stays readable on top.`
+
+## Step 3: Generate a set that stays consistent
+
+1. Generate **one anchor asset** first (usually the hero) with `flux-2-klein-4b`.
+2. **Look at it** (Read the saved file) and check: matches the brief? any slop tells, extra limbs, warped objects, garbage text? Fix the prompt rather than re-rolling the same prompt.
+3. Once approved, pass it as `--reference-images` for every other asset in the set and say how to use it: `"in the same visual style, palette and grain as image 0, show ..."`. klein models take up to 4 references.
+4. Use `flux-2-klein-9b` only for the final version of the one or two most visible assets.
+
+## Models and free daily budget (Cloudflare Workers AI, 10,000 neurons/day, resets 00:00 UTC)
+
+| Model | ≈ images/day free (1MP) | Sizes | References | Use for |
+|---|---|---|---|---|
+| `@cf/black-forest-labs/flux-2-klein-4b` **(default)** | ~95 | all aspect ratios | up to 4 | drafts and most assets |
+| `@cf/black-forest-labs/flux-2-klein-9b` | ~7 | all aspect ratios | up to 4 | final hero / key visuals |
+| `@cf/black-forest-labs/flux-1-schnell` | ~170 | square only | none | quick throwaway tests |
+| `@cf/leonardo/lucid-origin` | ~3 | all aspect ratios | none | photographic alternative |
+| `@cf/leonardo/phoenix-1.0` | ~4 | all aspect ratios | none | alternative illustration look |
+
+Sizes are ~1 megapixel (16:9 → 1280×720, 1:1 → 1024×1024). Paid fallbacks: any `gpt-image*` model (needs `OPENAI_API_KEY`) or Gemini models (needs `GEMINI_API_KEY`); use them only when the user asks or needs transparent backgrounds or reliable in-image text.
+
+## Running it
+
+Prefer the MCP tool `create_asset` from the `media-pipeline` server when it is available. Otherwise use the bundled CLI:
 
 ```bash
 node "${CLAUDE_PLUGIN_ROOT}/mcp-server/build/cli.bundle.js" \
-  --prompt "Your detailed image description" \
-  --output "./path/to/output.png" \
-  --aspect-ratio "16:9"
+  --prompt "<prompt with the style block>" \
+  --aspect-ratio "16:9" \
+  --output-dir "./public/images" \
+  --output "hero-workbench.png"
 ```
 
-### Parameters
+| Flag | Default | Notes |
+|---|---|---|
+| `--prompt, -p` | required | |
+| `--aspect-ratio, -a` | 1:1 | 16:9 hero/header · 4:3 or 3:2 sections · 1:1 cards · 9:16 mobile · 1200×630 OG → use 16:9 and crop |
+| `--model, -m` | `CLOUDFLARE_DEFAULT_MODEL` | see table above |
+| `--reference-images, -r` | – | Cloudflare klein: max 4, PNG/JPEG, auto-scaled to fit 500×500 |
+| `--output-dir, -d` / `--output, -o` | cwd / generated name | use descriptive kebab-case file names |
+| `--background`, `--mask`, `--output-format` | – | OpenAI only; Cloudflare rejects transparent backgrounds and masks |
 
-| Flag | Required | Default | Description |
-|------|----------|---------|-------------|
-| --prompt, -p | Yes | - | Detailed image description |
-| --output, -o | No | auto-generated | Output file path |
-| --aspect-ratio, -a | No | 1:1 | 1:1, 16:9, 9:16, 4:3, 3:4, 2:3, 3:2 |
-| --model, -m | No | provider default | Model to use; routes the provider (gpt-image*/dall-e* → OpenAI, others → Gemini) |
-| --reference-images, -r | No | - | Reference image paths (PNG/JPEG/WebP, repeatable or comma-separated, max 5) |
-| --mask | No | - | PNG mask marking the region to repaint; OpenAI only, requires --reference-images |
-| --background, -b | No | provider default | auto, transparent or opaque; OpenAI only. `gpt-image-2` refuses `transparent` and is rejected before the request is sent |
-| --output-format, -f | No | provider default | png, jpeg or webp; OpenAI only |
-| --output-dir, -d | No | current directory | Output directory |
+The CLI prints JSON: `{"success": true, "filePath": "...", "warnings": [...]}` or `{"success": false, "errorCode": "...", "error": "..."}`.
 
-### Environment Variables
+| errorCode | What to do |
+|---|---|
+| `CLOUDFLARE_QUOTA_EXCEEDED` | Stop generating. Tell the user the free budget resets at 00:00 UTC; don't retry in a loop. |
+| `CLOUDFLARE_AUTH_ERROR` | `CLOUDFLARE_ACCOUNT_ID` / `CLOUDFLARE_API_TOKEN` are wrong or the token lacks Workers AI permission. |
+| `OPTION_UNSUPPORTED_BY_MODEL` | Drop the option, or ask the user before switching to a paid provider. |
+| `TOO_MANY_REFERENCE_IMAGES` | Use a klein model, or fewer references. |
 
-| Variable | Required | Description |
-|----------|----------|-------------|
-| GEMINI_API_KEY | At least one of GEMINI_API_KEY / OPENAI_API_KEY | Your Gemini API key |
-| OPENAI_API_KEY | At least one of GEMINI_API_KEY / OPENAI_API_KEY | Your OpenAI API key |
-| GEMINI_DEFAULT_MODEL | No | Preferred default Gemini model |
-| OPENAI_DEFAULT_MODEL | No | Preferred default OpenAI model (default: gpt-image-2) |
-| IMAGE_PROVIDER | No | gemini or openai — provider used when --model is omitted |
-| MEDIA_PIPELINE_LOG_LEVEL | No | Logging level for stderr diagnostics |
+## Step 4: Integrate properly
 
-### Output
+- Save into the project's real asset folder (`public/images/`, `src/assets/`), not the repo root.
+- Write meaningful `alt` text describing the image's role, and set `width`/`height` to avoid layout shift.
+- Put headline text in HTML over the image, never baked into it.
+- Tell the user which assets were generated and with which model, so they can regenerate or replace them later.
 
-The CLI outputs JSON:
-```json
-{"success": true, "filePath": "/path/to/generated-image.png"}
-```
-
-Or on error:
-```json
-{"success": false, "error": "Error message"}
-```
-
-### Aspect Ratio Selection
-
-- **16:9** - Hero images, website headers, presentations
-- **1:1** - Social media, thumbnails, profile images
-- **9:16** - Mobile stories, vertical banners
-- **4:3** - Blog posts, general web content
-- **3:2** - Photography-style images
-
-## Prompt Crafting
-
-Use this formula for effective prompts:
-
-```
-[Style] [Subject] [Composition] [Context/Atmosphere]
-```
-
-### Examples
-
-**Hero Image for Tech Startup**
-```
-Minimalist 3D illustration of abstract geometric shapes floating in space,
-soft gradient background from deep purple to electric blue, subtle glow effects,
-modern professional aesthetic, wide composition for website header
-```
-
-**E-commerce Product**
-```
-Clean product photography of modern wireless headphones on white marble surface,
-soft studio lighting from left, subtle shadows, high-end minimalist aesthetic,
-centered composition
-```
-
-**Blog Post Header**
-```
-Aerial photography of winding river through autumn forest, golden hour lighting,
-warm color palette with oranges and reds, cinematic wide shot, serene atmosphere
-```
-
-**App Illustration**
-```
-Flat vector illustration of person organizing digital files on floating screens,
-soft pastel colors, isometric perspective, clean lines, friendly approachable style
-```
-
-## Pattern Detection
-
-**Automatically invoke this skill** when you see:
-
-```html
-<!-- Placeholder detection -->
-<img src="placeholder.jpg" alt="Hero">
-<!-- Action: Invoke skill and generate a custom hero image -->
-
-<!-- Empty visual section -->
-<section class="features">
-  <h2>Our Features</h2>
-  <!-- No images -->
-</section>
-<!-- Action: Invoke skill to create feature illustrations -->
-```
-
-```css
-/* Generic stock reference */
-.banner { background: url('stock-image.jpg'); }
-/* Action: Invoke skill to create a unique background */
-```
-
-## Workflow
-
-1. **Detect Need** - Identify visual content requirements (hero, illustrations, backgrounds)
-2. **Invoke Skill** - Use the Skill tool with `skill: "image-generation"` immediately
-3. **Analyze Context** - Understand project style and brand
-4. **Craft Prompt** - Build detailed prompt using the formula above
-5. **Generate** - Run the CLI script with optimized parameters
-6. **Integrate** - Place image in project with proper references
-
-## Model Selection
-
-The CLI is dual-provider: the `--model` value routes the request — model names starting with `gpt-image` or `dall-e` go to OpenAI, everything else goes to Gemini. When `--model` is omitted, `IMAGE_PROVIDER` picks which provider's default model is used.
-
-- **Gemini** (`GEMINI_DEFAULT_MODEL`, e.g. `gemini-3-pro-image-preview`) — models are fetched dynamically from the Gemini API; the CLI falls back to the first discovered image-capable model if no default is set. Prefer Gemini for iterative creative work and when relying on the dynamically discovered model catalog.
-- **OpenAI** (`OPENAI_DEFAULT_MODEL`, default `gpt-image-2`) — use when you specifically need OpenAI's `gpt-image-2` model, or when only an OpenAI API key is configured. Note OpenAI's image sizes are limited to `1024x1024`/`1536x1024`/`1024x1536`; non-matching aspect ratios are mapped to the nearest supported size with a warning.
-
-## Best Practices
-
-**DO:**
-- Include specific style keywords
-- Match aspect ratio to intended use
-- Describe mood and atmosphere
-- Specify color palette for brand consistency
-
-**DON'T:**
-- Use vague prompts ("make it look good")
-- Ignore where the image will be used
-- Skip aspect ratio for specific layouts
-
-## Reference
-
-For advanced prompt techniques: [references/prompt-crafting.md](references/prompt-crafting.md)
-
-## Alternative: MCP Tool
-
-If the MCP server is configured, you can also use:
-
-```
-mcp__media-pipeline__create_asset
-```
-
-Parameters: `prompt`, `outputPath`, `aspectRatio`, `model` (routes to Gemini or OpenAI by name), `referenceImages` (up to 5 absolute paths, PNG/JPEG/WebP), `mask`, `background`, `outputFormat` (the last three are OpenAI-only)
-
+Pairs with the `design-taste-frontend` skill (layout, typography, motion); this skill covers imagery only. More prompt vocabulary: [references/prompt-crafting.md](references/prompt-crafting.md)

@@ -37,7 +37,7 @@ export declare const createAssetInputSchema: {
         };
         readonly referenceImages: {
             readonly type: "array";
-            readonly description: "Absolute file paths to reference images to include with the prompt. Useful for character/style consistency — the model sees these images alongside the text prompt. Supported formats: PNG, JPEG, WebP. Maximum 5 images.";
+            readonly description: "Absolute file paths to reference images to include with the prompt. Useful for character/style consistency — the model sees these images alongside the text prompt. Supported formats: PNG, JPEG, WebP. Maximum 5 images. Cloudflare: only the flux-2-klein models accept them, at most 4, PNG or JPEG only, and larger images are scaled down to fit 500x500 before upload.";
             readonly items: {
                 readonly type: "string";
                 readonly minLength: 1;
@@ -74,7 +74,7 @@ export declare const createAssetInputSchema: {
         };
         readonly model: {
             readonly type: "string";
-            readonly description: "Optional model name for image generation. gpt-image*/dall-e* models route to OpenAI; all other models route to Gemini. If omitted, the configured default provider's default model is used when available.";
+            readonly description: "Optional model name for image generation. @cf/* models route to Cloudflare Workers AI (free daily allocation): @cf/black-forest-labs/flux-2-klein-4b (default, ~95 images/day free, accepts reference images), @cf/black-forest-labs/flux-2-klein-9b (higher quality, ~7/day), @cf/black-forest-labs/flux-1-schnell (square only, no references), @cf/leonardo/lucid-origin and @cf/leonardo/phoenix-1.0 (~3-4/day). gpt-image*/dall-e* models route to OpenAI; all other models route to Gemini. If omitted, the configured default provider's default model is used when available.";
             readonly minLength: 1;
             readonly maxLength: 256;
         };
@@ -112,7 +112,7 @@ export declare const createAssetOutputSchema: {
         };
         readonly model: {
             readonly type: "string";
-            readonly description: "Model used for generation (Gemini or OpenAI).";
+            readonly description: "Model used for generation (Gemini, OpenAI or Cloudflare).";
         };
         readonly outputDirectory: {
             readonly type: "string";

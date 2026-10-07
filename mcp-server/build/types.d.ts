@@ -8,7 +8,9 @@ export type ImageOutputFormat = (typeof IMAGE_OUTPUT_FORMATS)[number];
 export declare const ALPHA_CAPABLE_OUTPUT_FORMATS: readonly ImageOutputFormat[];
 export declare const FALLBACK_IMAGE_MODELS: readonly ["gemini-3-pro-image-preview", "gemini-2.5-flash-image"];
 export declare const FALLBACK_OPENAI_IMAGE_MODELS: readonly ["gpt-image-2"];
-export type ImageProvider = "gemini" | "openai";
+/** Cheapest FLUX.2 model on Workers AI: roughly 95 1MP images per day on the free allocation. */
+export declare const DEFAULT_CLOUDFLARE_IMAGE_MODEL = "@cf/black-forest-labs/flux-2-klein-4b";
+export type ImageProvider = "gemini" | "openai" | "cloudflare";
 export declare const DEFAULT_REQUEST_TIMEOUT_MS = 60000;
 export declare const DEFAULT_LOG_LEVEL = "info";
 export type GeminiModel = string;
@@ -56,8 +58,11 @@ export interface GeminiConfig {
 export interface RuntimeConfig {
     geminiApiKey: string;
     openaiApiKey: string;
+    cloudflareAccountId: string;
+    cloudflareApiToken: string;
     geminiDefaultModel: GeminiModel;
     openaiDefaultModel: string;
+    cloudflareDefaultModel: string;
     defaultProvider: ImageProvider;
     outputDirectory: string;
     requestTimeoutMs: number;

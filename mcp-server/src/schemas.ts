@@ -61,7 +61,7 @@ export const createAssetArgsSchema = z
       .max(256, "model must be at most 256 characters long")
       .optional()
       .describe(
-        "Model to use for generation (gpt-image*/dall-e* route to OpenAI, others to Gemini)"
+        "Model to use for generation (@cf/* route to Cloudflare Workers AI, gpt-image*/dall-e* to OpenAI, others to Gemini)"
       ),
   });
 
@@ -79,7 +79,7 @@ export const createAssetInputSchema = {
     referenceImages: {
       type: "array",
       description:
-        "Absolute file paths to reference images to include with the prompt. Useful for character/style consistency — the model sees these images alongside the text prompt. Supported formats: PNG, JPEG, WebP. Maximum 5 images.",
+        "Absolute file paths to reference images to include with the prompt. Useful for character/style consistency — the model sees these images alongside the text prompt. Supported formats: PNG, JPEG, WebP. Maximum 5 images. Cloudflare: only the flux-2-klein models accept them, at most 4, PNG or JPEG only, and larger images are scaled down to fit 500x500 before upload.",
       items: {
         type: "string",
         minLength: 1,
@@ -122,7 +122,7 @@ export const createAssetInputSchema = {
     model: {
       type: "string",
       description:
-        "Optional model name for image generation. gpt-image*/dall-e* models route to OpenAI; all other models route to Gemini. If omitted, the configured default provider's default model is used when available.",
+        "Optional model name for image generation. @cf/* models route to Cloudflare Workers AI (free daily allocation): @cf/black-forest-labs/flux-2-klein-4b (default, ~95 images/day free, accepts reference images), @cf/black-forest-labs/flux-2-klein-9b (higher quality, ~7/day), @cf/black-forest-labs/flux-1-schnell (square only, no references), @cf/leonardo/lucid-origin and @cf/leonardo/phoenix-1.0 (~3-4/day). gpt-image*/dall-e* models route to OpenAI; all other models route to Gemini. If omitted, the configured default provider's default model is used when available.",
       minLength: 1,
       maxLength: 256,
     },
@@ -161,7 +161,7 @@ export const createAssetOutputSchema = {
     },
     model: {
       type: "string",
-      description: "Model used for generation (Gemini or OpenAI).",
+      description: "Model used for generation (Gemini, OpenAI or Cloudflare).",
     },
     outputDirectory: {
       type: "string",

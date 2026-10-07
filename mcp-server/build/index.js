@@ -7,7 +7,7 @@ import { registerCreateAssetTool } from "./server-handlers.js";
 const runtimeConfig = createRuntimeConfig();
 const logger = createLogger("server", runtimeConfig.logLevel);
 if (!hasAnyApiKey(runtimeConfig)) {
-    logger.error("At least one provider API key is required: set GEMINI_API_KEY and/or OPENAI_API_KEY");
+    logger.error("At least one provider is required: set CLOUDFLARE_ACCOUNT_ID + CLOUDFLARE_API_TOKEN, GEMINI_API_KEY and/or OPENAI_API_KEY");
     process.exit(1);
 }
 const mediaPipelineService = new MediaPipelineService(runtimeConfig, logger);
@@ -66,6 +66,7 @@ function main() {
         defaultProvider: runtimeConfig.defaultProvider,
         geminiDefaultModel: runtimeConfig.geminiDefaultModel,
         openaiDefaultModel: runtimeConfig.openaiDefaultModel,
+        cloudflareDefaultModel: runtimeConfig.cloudflareDefaultModel,
         outputDirectory: mediaPipelineService.getOutputDirectory(),
         requestTimeoutMs: runtimeConfig.requestTimeoutMs,
     });

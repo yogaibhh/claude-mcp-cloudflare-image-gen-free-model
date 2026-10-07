@@ -1,6 +1,6 @@
 import os from "node:os";
 import path from "node:path";
-import { DEFAULT_LOG_LEVEL, DEFAULT_REQUEST_TIMEOUT_MS, FALLBACK_IMAGE_MODELS, FALLBACK_OPENAI_IMAGE_MODELS, } from "./types.js";
+import { DEFAULT_CLOUDFLARE_IMAGE_MODEL, DEFAULT_LOG_LEVEL, DEFAULT_REQUEST_TIMEOUT_MS, FALLBACK_IMAGE_MODELS, FALLBACK_OPENAI_IMAGE_MODELS, } from "./types.js";
 const LOG_LEVEL_PRIORITY = {
     error: 0,
     warn: 1,
@@ -58,28 +58,42 @@ export function resolveDefaultModel(availableModels, configuredDefaultModel) {
     }
     return availableModels[0] || configuredDefaultModel;
 }
-export function parseImageProvider(value, geminiApiKey, openaiApiKey) {
+export function parseImageProvider(value, geminiApiKey, openaiApiKey, cloudflareConfigured = false) {
     const normalized = value?.trim().toLowerCase();
-    if (normalized === "gemini" || normalized === "openai") {
+    if (normalized === "gemini" ||
+        normalized === "openai" ||
+        normalized === "cloudflare") {
         return normalized;
     }
     if (!geminiApiKey && openaiApiKey) {
         return "openai";
     }
+    if (!geminiApiKey && cloudflareConfigured) {
+        return "cloudflare";
+    }
     return "gemini";
 }
+/** Workers AI calls need both halves: the account in the URL and the token in the header. */
+export function hasCloudflareCredentials(config) {
+    return Boolean(config.cloudflareAccountId && config.cloudflareApiToken);
+}
 export function hasAnyApiKey(config) {
-    return Boolean(config.geminiApiKey || config.openaiApiKey);
+    return Boolean(config.geminiApiKey || config.openaiApiKey || hasCloudflareCredentials(config));
 }
 export function createRuntimeConfig(env = process.env) {
     const geminiApiKey = env.GEMINI_API_KEY?.trim() ?? "";
     const openaiApiKey = env.OPENAI_API_KEY?.trim() ?? "";
+    const cloudflareAccountId = env.CLOUDFLARE_ACCOUNT_ID?.trim() ?? "";
+    const cloudflareApiToken = env.CLOUDFLARE_API_TOKEN?.trim() ?? "";
     return {
         geminiApiKey,
         openaiApiKey,
+        cloudflareAccountId,
+        cloudflareApiToken,
         geminiDefaultModel: env.GEMINI_DEFAULT_MODEL?.trim() || FALLBACK_IMAGE_MODELS[0],
         openaiDefaultModel: env.OPENAI_DEFAULT_MODEL?.trim() || FALLBACK_OPENAI_IMAGE_MODELS[0],
-        defaultProvider: parseImageProvider(env.IMAGE_PROVIDER, geminiApiKey, openaiApiKey),
+        cloudflareDefaultModel: env.CLOUDFLARE_DEFAULT_MODEL?.trim() || DEFAULT_CLOUDFLARE_IMAGE_MODEL,
+        defaultProvider: parseImageProvider(env.IMAGE_PROVIDER, geminiApiKey, openaiApiKey, Boolean(cloudflareAccountId && cloudflareApiToken)),
         outputDirectory: resolveOutputDirectory(env.IMAGE_OUTPUT_DIR),
         requestTimeoutMs: parseRequestTimeoutMs(env.GEMINI_REQUEST_TIMEOUT_MS),
         logLevel: parseLogLevel(env.MEDIA_PIPELINE_LOG_LEVEL),

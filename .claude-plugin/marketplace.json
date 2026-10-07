@@ -7,7 +7,7 @@
     {
       "name": "media-pipeline",
       "source": "./",
-      "description": "Media asset processing plugin with skills for visual content creation.",
+      "description": "Media asset processing plugin with skills for visual content creation. Free Cloudflare Workers AI (FLUX.2) by default, Gemini and OpenAI optional.",
       "version": "1.2.2",
       "author": {
         "name": "Claude Image Gen"

@@ -470,3 +470,88 @@ test("createAsset still accepts a reference image larger than the mask limit", a
     removeDirectory(outputDirectory);
   }
 });
+
+test("createAsset uses the Cloudflare default model when cloudflare is the only provider", async () => {
+  const outputDirectory = createTempDirectory();
+  const cloudflareClient = createFakeClient();
+
+  try {
+    const service = createService(
+      outputDirectory,
+      { CLOUDFLARE_ACCOUNT_ID: "account", CLOUDFLARE_API_TOKEN: "token" },
+      { clients: { cloudflare: cloudflareClient } }
+    );
+
+    const response = await service.createAsset({ prompt: "a quiet harbour" });
+
+    assert.equal(response.success, true, response.error);
+    assert.equal(response.model, "@cf/black-forest-labs/flux-2-klein-4b");
+    assert.equal(cloudflareClient.calls.length, 1);
+    assert.ok(fs.existsSync(response.filePath));
+  } finally {
+    removeDirectory(outputDirectory);
+  }
+});
+
+test("createAsset routes @cf/ models to Cloudflare alongside the other providers", async () => {
+  const outputDirectory = createTempDirectory();
+  const geminiClient = createFakeClient();
+  const cloudflareClient = createFakeClient();
+
+  try {
+    const service = createService(
+      outputDirectory,
+      {
+        GEMINI_API_KEY: "gemini-key",
+        CLOUDFLARE_ACCOUNT_ID: "account",
+        CLOUDFLARE_API_TOKEN: "token",
+      },
+      {
+        clients: { gemini: geminiClient, cloudflare: cloudflareClient },
+        fetchGeminiModels: async () => ["gemini-3-pro-image-preview"],
+      }
+    );
+
+    const response = await service.createAsset({
+      prompt: "ceramic bowl",
+      model: "@cf/leonardo/lucid-origin",
+    });
+
+    assert.equal(response.success, true, response.error);
+    assert.equal(cloudflareClient.calls.length, 1);
+    assert.equal(geminiClient.calls.length, 0);
+    assert.equal(cloudflareClient.calls[0].model, "@cf/leonardo/lucid-origin");
+
+    const unknown = await service.createAsset({
+      prompt: "x",
+      model: "@cf/stabilityai/stable-diffusion-xl-base-1.0",
+    });
+    assert.equal(unknown.success, false);
+    assert.equal(unknown.errorCode, "INVALID_MODEL");
+  } finally {
+    removeDirectory(outputDirectory);
+  }
+});
+
+test("createAsset reports PROVIDER_NOT_CONFIGURED for @cf/ models without Cloudflare credentials", async () => {
+  const outputDirectory = createTempDirectory();
+
+  try {
+    const service = createService(
+      outputDirectory,
+      { GEMINI_API_KEY: "gemini-key", IMAGE_PROVIDER: "cloudflare" },
+      {
+        clients: { gemini: createFakeClient() },
+        fetchGeminiModels: async () => ["gemini-3-pro-image-preview"],
+      }
+    );
+
+    const response = await service.createAsset({ prompt: "x" });
+
+    assert.equal(response.success, false);
+    assert.equal(response.errorCode, "PROVIDER_NOT_CONFIGURED");
+    assert.ok(response.error.includes("CLOUDFLARE_ACCOUNT_ID"));
+  } finally {
+    removeDirectory(outputDirectory);
+  }
+});

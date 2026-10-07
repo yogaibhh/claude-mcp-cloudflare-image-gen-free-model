@@ -1,10 +1,11 @@
 import { GeminiImageClient, fetchImageModels } from "./gemini-client.js";
 import { OpenAIImageClient, fetchOpenAIImageModels } from "./openai-client.js";
+import { CloudflareImageClient, CLOUDFLARE_IMAGE_MODEL_IDS, } from "./cloudflare-client.js";
 import { ImageStorage } from "./image-storage.js";
 import { detectPngTransparency, loadReferenceImages, MAX_MASK_BYTES, } from "./reference-images.js";
 import { pathToFileURL } from "node:url";
 import { getApiKeyEnvVarForProvider, getDefaultModelForProvider, resolveProviderForModel, } from "./provider.js";
-import { formatErrorMessage, getFallbackImageModels, resolveDefaultModel, } from "./runtime.js";
+import { formatErrorMessage, getFallbackImageModels, hasCloudflareCredentials, resolveDefaultModel, } from "./runtime.js";
 import { FALLBACK_OPENAI_IMAGE_MODELS } from "./types.js";
 export class MediaPipelineService {
     config;
@@ -30,6 +31,13 @@ export class MediaPipelineService {
         if (config.openaiApiKey) {
             clients.openai = new OpenAIImageClient({
                 apiKey: config.openaiApiKey,
+                requestTimeoutMs: config.requestTimeoutMs,
+            });
+        }
+        if (hasCloudflareCredentials(config)) {
+            clients.cloudflare = new CloudflareImageClient({
+                accountId: config.cloudflareAccountId,
+                apiToken: config.cloudflareApiToken,
                 requestTimeoutMs: config.requestTimeoutMs,
             });
         }
@@ -115,10 +123,16 @@ export class MediaPipelineService {
             modelsByProvider.openai = discovery.models;
             warnings.push(...discovery.warnings);
         }
+        // Cloudflare models come from the client's own list rather than discovery,
+        // since each one needs a request shape the client has to know in advance.
+        if (hasCloudflareCredentials(this.config)) {
+            modelsByProvider.cloudflare = [...CLOUDFLARE_IMAGE_MODEL_IDS];
+        }
         const availableModels = [
             ...new Set([
                 ...(modelsByProvider.gemini ?? []),
                 ...(modelsByProvider.openai ?? []),
+                ...(modelsByProvider.cloudflare ?? []),
             ]),
         ];
         const defaultProvider = this.config.defaultProvider;

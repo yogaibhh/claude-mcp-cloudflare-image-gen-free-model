@@ -4,11 +4,14 @@
       "command": "node",
       "args": ["${CLAUDE_PLUGIN_ROOT}/mcp-server/build/bundle.js"],
       "env": {
-        "GEMINI_API_KEY": "${GEMINI_API_KEY}",
+        "CLOUDFLARE_ACCOUNT_ID": "${CLOUDFLARE_ACCOUNT_ID:-}",
+        "CLOUDFLARE_API_TOKEN": "${CLOUDFLARE_API_TOKEN:-}",
+        "CLOUDFLARE_DEFAULT_MODEL": "${CLOUDFLARE_DEFAULT_MODEL:-@cf/black-forest-labs/flux-2-klein-4b}",
+        "GEMINI_API_KEY": "${GEMINI_API_KEY:-}",
         "GEMINI_DEFAULT_MODEL": "${GEMINI_DEFAULT_MODEL:-gemini-3-pro-image-preview}",
-        "OPENAI_API_KEY": "${OPENAI_API_KEY}",
+        "OPENAI_API_KEY": "${OPENAI_API_KEY:-}",
         "OPENAI_DEFAULT_MODEL": "${OPENAI_DEFAULT_MODEL:-gpt-image-2}",
-        "IMAGE_PROVIDER": "${IMAGE_PROVIDER:-gemini}",
+        "IMAGE_PROVIDER": "${IMAGE_PROVIDER:-cloudflare}",
         "IMAGE_OUTPUT_DIR": "${IMAGE_OUTPUT_DIR:-./generated-images}"
       }
     }

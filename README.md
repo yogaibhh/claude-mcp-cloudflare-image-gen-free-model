@@ -2,6 +2,12 @@
 
 AI-powered image generation using Google Gemini or OpenAI (gpt-image-2), integrated with Claude Code.
 
+> **Local fork (branch `cloudflare-provider`):** adds a free **Cloudflare Workers AI** provider and makes it the default.
+> - Models: `@cf/black-forest-labs/flux-2-klein-4b` (default, ~95 images/day free), `flux-2-klein-9b` (~7/day, higher quality), `flux-1-schnell`, `@cf/leonardo/lucid-origin`, `@cf/leonardo/phoenix-1.0`. Any `@cf/*` model name routes to Cloudflare.
+> - Setup: a free Cloudflare account, its **Account ID**, and an API token from the **Workers AI** template, set as `CLOUDFLARE_ACCOUNT_ID` and `CLOUDFLARE_API_TOKEN`. Gemini/OpenAI keys become optional.
+> - Reference images (klein models): up to 4, PNG/JPEG, scaled down automatically to fit 500×500. No transparent background, mask or output-format control on Cloudflare.
+> - The `image-generation` skill is rewritten around anti-slop art direction (design tokens first, banned visual clichés, anchor image + references for consistent sets).
+
 ## Features
 
 - Generate images from text prompts using Google Gemini or OpenAI (gpt-image-2)

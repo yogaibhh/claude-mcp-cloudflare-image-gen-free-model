@@ -19,5 +19,7 @@ export const FALLBACK_IMAGE_MODELS = [
     "gemini-2.5-flash-image",
 ];
 export const FALLBACK_OPENAI_IMAGE_MODELS = ["gpt-image-2"];
+/** Cheapest FLUX.2 model on Workers AI: roughly 95 1MP images per day on the free allocation. */
+export const DEFAULT_CLOUDFLARE_IMAGE_MODEL = "@cf/black-forest-labs/flux-2-klein-4b";
 export const DEFAULT_REQUEST_TIMEOUT_MS = 60_000;
 export const DEFAULT_LOG_LEVEL = "info";
